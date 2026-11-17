@@ -5,10 +5,10 @@
 # Установщика в привычном смысле (.pkg с мастером) у утилиты нет и не нужно:
 # приложение самодостаточно, ставится перетаскиванием.
 #
-# Важно: образ не нотаризован. На вашей машине это ничего не меняет, но на
-# чужой Gatekeeper заблокирует запуск, и обходить это придётся руками через
-# «Системные настройки» → «Конфиденциальность и безопасность». Ровно это и
-# написано в записке внутри образа.
+# Образ подписывается Developer ID и нотаризуется, если в связке ключей есть
+# профиль notarytool (по умолчанию «notchapp», другое имя — NOTCHAPP_NOTARY_PROFILE):
+#   xcrun notarytool store-credentials notchapp --team-id <TEAM>
+# Без нотаризации Gatekeeper на чужой машине заблокирует запуск.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -74,6 +74,16 @@ hdiutil create \
 
 if [ -n "${DIST_CERT}" ]; then
   codesign --force --timestamp --sign "${DIST_CERT}" "${DMG}"
+
+  PROFILE="${NOTCHAPP_NOTARY_PROFILE:-notchapp}"
+  echo "==> нотаризация (профиль «${PROFILE}»), обычно несколько минут"
+  if xcrun notarytool submit "${DMG}" --keychain-profile "${PROFILE}" --wait 2>&1 \
+       | tee /dev/stderr | grep "status: Accepted" >/dev/null; then
+    xcrun stapler staple "${DMG}" >/dev/null
+  else
+    echo "!! образ НЕ нотаризован: нет профиля «${PROFILE}» или Apple отклонила отправку."
+    exit 1
+  fi
 fi
 
 echo "==> готово: ${DMG}  ($(du -h "${DMG}" | cut -f1))"

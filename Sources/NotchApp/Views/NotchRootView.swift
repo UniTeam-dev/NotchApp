@@ -8,6 +8,8 @@ struct NotchRootView: View {
     @ObservedObject var commands: CommandStore
     @ObservedObject var git: GitStore
     @ObservedObject var keepAwake: KeepAwake
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var updater: Updater
 
     var onRequestClose: () -> Void
 
@@ -16,7 +18,7 @@ struct NotchRootView: View {
 
         ZStack(alignment: .top) {
             // Аура лежит за пределами clipShape, поэтому мягко выходит за края.
-            if let glow = agents.glow {
+            if let glow {
                 NotchAura(glow: glow, isOpen: viewModel.isOpen, size: size)
             }
             panelBody(size: size)
@@ -32,7 +34,17 @@ struct NotchRootView: View {
     /// ничего не видно, индикатор живёт в крыльях по бокам от неё.
     private var currentSize: CGSize {
         if viewModel.isOpen { return viewModel.openSize }
-        return agents.glow == nil ? viewModel.closedSize : viewModel.closedIndicatorSize
+        return glow == nil ? viewModel.closedSize : viewModel.closedIndicatorSize
+    }
+
+    /// Раздел «Агенты» скрыт — значит, и подсветки с индикатором нет.
+    private var glow: NotchGlow? {
+        settings.isVisible(.agents) ? agents.glow : nil
+    }
+
+    /// Выбранная вкладка могла быть скрыта в настройках — тогда первая из видимых.
+    private var activeTab: NotchTab {
+        settings.isVisible(viewModel.tab) ? viewModel.tab : (settings.visibleTabs.first ?? viewModel.tab)
     }
 
     // MARK: - Приёмник файлов
@@ -41,6 +53,7 @@ struct NotchRootView: View {
         let height = max(size.height, viewModel.openSize.height)
         return ShelfDropCatcher(
             onDrop: { pasteboard in
+                guard settings.isVisible(.shelf) else { return false }
                 let added = shelf.add(from: pasteboard)
                 if added { viewModel.tab = .shelf }
                 return added
@@ -64,7 +77,7 @@ struct NotchRootView: View {
             if viewModel.isOpen {
                 expanded
                     .transition(.opacity)
-            } else if let glow = agents.glow {
+            } else if let glow {
                 ClosedIndicator(
                     glow: glow,
                     count: agents.pendingCount,
@@ -119,10 +132,16 @@ struct NotchRootView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            ForEach(NotchTab.allCases) { tab in
+            ForEach(settings.visibleTabs) { tab in
                 tabChip(for: tab)
             }
             Spacer(minLength: 8)
+            IconButton(
+                symbol: "gearshape",
+                help: "Настройки",
+                tint: viewModel.showsSettings ? Color.white : nil,
+                action: { viewModel.showsSettings.toggle() }
+            )
             // В шапке, а не на вкладке: переключатель нужен с любого экрана.
             IconButton(
                 symbol: keepAwake.isOn ? "cup.and.saucer.fill" : "cup.and.saucer",
@@ -139,20 +158,32 @@ struct NotchRootView: View {
         // В значке вкладки — всё, что ждёт человека, включая непросмотренные
         // «готово»: иначе завершённый чат виден только в закрытой челке.
         let badge: Int = isAgents ? agents.pendingCount : 0
-        let accent: Color? = isAgents ? agents.glow?.color : nil
+        let accent: Color? = isAgents ? glow?.color : nil
 
         return TabChip(
             tab: tab,
-            isSelected: viewModel.tab == tab,
+            isSelected: !viewModel.showsSettings && activeTab == tab,
             badge: badge,
             accent: accent,
-            action: { viewModel.tab = tab }
+            action: {
+                viewModel.tab = tab
+                viewModel.showsSettings = false
+            }
         )
     }
 
     @ViewBuilder
     private var content: some View {
-        switch viewModel.tab {
+        if viewModel.showsSettings {
+            SettingsView(settings: settings, updater: updater)
+        } else {
+            tabContent
+        }
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch activeTab {
         case .music:
             MusicView(music: music)
         case .shelf:

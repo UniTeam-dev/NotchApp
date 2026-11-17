@@ -6,6 +6,8 @@ final class NotchViewModel: ObservableObject {
     @Published var isOpen = false
     @Published var tab: NotchTab = .music
     @Published var isDropTargeted = false
+    /// Вместо вкладки показаны настройки.
+    @Published var showsSettings = false
 
     /// Размер физического выреза. Всё, что нарисовано в этих границах,
     /// закрыто аппаратной челкой и пользователю не видно.

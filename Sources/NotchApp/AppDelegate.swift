@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let commands = CommandStore()
     private let git = GitStore()
     private let keepAwake = KeepAwake()
+    private let settings = AppSettings()
+    private let updater = Updater()
 
     private var notch: NotchController?
     private var statusItem: StatusItemController?
@@ -15,13 +17,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Paths.ensureDirectories()
 
-        let controller = NotchController(music: music, shelf: shelf, agents: agents, commands: commands, git: git, keepAwake: keepAwake)
+        let controller = NotchController(music: music, shelf: shelf, agents: agents, commands: commands, git: git, keepAwake: keepAwake, settings: settings, updater: updater)
         controller.start()
         notch = controller
 
         statusItem = StatusItemController(
             agents: agents,
+            settings: settings,
             onOpen: { [weak controller] tab in controller?.open(tab: tab) },
+            onOpenSettings: { [weak controller] in controller?.openSettings() },
             onQuit: { NSApp.terminate(nil) }
         )
 

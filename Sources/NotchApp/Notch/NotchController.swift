@@ -36,14 +36,18 @@ final class NotchController: NSObject {
     private let commands: CommandStore
     private let git: GitStore
     private let keepAwake: KeepAwake
+    private let settings: AppSettings
+    private let updater: Updater
 
-    init(music: MusicModel, shelf: ShelfStore, agents: AgentStore, commands: CommandStore, git: GitStore, keepAwake: KeepAwake) {
+    init(music: MusicModel, shelf: ShelfStore, agents: AgentStore, commands: CommandStore, git: GitStore, keepAwake: KeepAwake, settings: AppSettings, updater: Updater) {
         self.music = music
         self.shelf = shelf
         self.agents = agents
         self.commands = commands
         self.git = git
         self.keepAwake = keepAwake
+        self.settings = settings
+        self.updater = updater
         super.init()
     }
 
@@ -64,7 +68,9 @@ final class NotchController: NSObject {
         clickMonitor?.start()
 
         dragDetector.onEnter = { [weak self] in
-            guard let self else { return }
+            // Полка скрыта — файлу некуда падать, панель не раскрываем.
+            guard let self, self.settings.isVisible(.shelf) else { return }
+            self.viewModel.showsSettings = false
             self.viewModel.tab = .shelf
             self.open()
         }
@@ -198,6 +204,8 @@ final class NotchController: NSObject {
             commands: commands,
             git: git,
             keepAwake: keepAwake,
+            settings: settings,
+            updater: updater,
             onRequestClose: { [weak self] in self?.close() }
         )
 
@@ -327,6 +335,12 @@ final class NotchController: NSObject {
     /// Открыть панель на конкретной вкладке (из меню-бара).
     func open(tab: NotchTab) {
         viewModel.tab = tab
+        viewModel.showsSettings = false
+        open()
+    }
+
+    func openSettings() {
+        viewModel.showsSettings = true
         open()
     }
 }

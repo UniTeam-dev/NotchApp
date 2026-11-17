@@ -9,7 +9,10 @@ import Combine
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let item: NSStatusItem
     private let agents: AgentStore
+    private let settings: AppSettings
     private let onOpen: (NotchTab) -> Void
+    private let onOpenSettings: () -> Void
+    private var tabItems: [NotchTab: NSMenuItem] = [:]
     private let onQuit: () -> Void
     private var cancellables = Set<AnyCancellable>()
 
@@ -25,9 +28,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         keyEquivalent: ""
     )
 
-    init(agents: AgentStore, onOpen: @escaping (NotchTab) -> Void, onQuit: @escaping () -> Void) {
+    init(agents: AgentStore, settings: AppSettings, onOpen: @escaping (NotchTab) -> Void, onOpenSettings: @escaping () -> Void, onQuit: @escaping () -> Void) {
         self.agents = agents
+        self.settings = settings
         self.onOpen = onOpen
+        self.onOpenSettings = onOpenSettings
         self.onQuit = onQuit
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
@@ -36,12 +41,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         item.menu = buildMenu()
 
         // Счётчики дублируются в меню-баре: панель закрыта чаще, чем открыта.
+        // Раздел «Агенты» скрыт — счётчики в меню-баре тоже молчат.
         agents.$sessions
+            .combineLatest(settings.$hiddenTabs)
             .receive(on: RunLoop.main)
-            .sink { [weak self] sessions in
+            .sink { [weak self] sessions, hidden in
+                let shown = hidden.contains(.agents) ? [] : sessions
                 self?.configureButton(
-                    attention: sessions.filter { $0.requiresAttention }.count,
-                    done: sessions.filter { $0.awaitsVisit }.count
+                    attention: shown.filter { $0.requiresAttention }.count,
+                    done: shown.filter { $0.awaitsVisit }.count
                 )
             }
             .store(in: &cancellables)
@@ -84,7 +92,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             menuItem.target = self
             menuItem.representedObject = tab.rawValue
             menu.addItem(menuItem)
+            tabItems[tab] = menuItem
         }
+
+        let settingsItem = NSMenuItem(title: "Настройки…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
@@ -117,6 +130,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     /// настройки», — поэтому читаем его каждый раз при открытии меню,
     /// а не запоминаем.
     func menuNeedsUpdate(_ menu: NSMenu) {
+        for (tab, menuItem) in tabItems {
+            menuItem.isHidden = !settings.isVisible(tab)
+        }
+
         launchItem.state = LaunchAtLogin.isEnabled ? .on : .off
         launchItem.title = LaunchAtLogin.needsApproval
             ? "Запускать при входе — нужно разрешение"
@@ -131,6 +148,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard let raw = sender.representedObject as? String,
               let tab = NotchTab(rawValue: raw) else { return }
         onOpen(tab)
+    }
+
+    @objc private func openSettings() {
+        onOpenSettings()
     }
 
     @objc private func clearDone() {

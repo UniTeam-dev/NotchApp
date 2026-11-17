@@ -26,19 +26,27 @@ struct AgentsView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 4) {
                 ForEach(agents.sessions) { session in
-                    AgentRow(session: session) {
-                        agents.activate(session)
-                    }
+                    row(for: session)
                 }
             }
         }
+    }
+
+    /// Убрать можно любую строку, не только завершённую: сессия, про которую
+    /// хук соврал или чьё приложение закрыли молча, иначе застревает навсегда.
+    private func row(for session: AgentSession) -> AgentRow {
+        AgentRow(
+            session: session,
+            onActivate: { agents.activate(session) },
+            onDismiss: { agents.dismiss(session) }
+        )
     }
 
     private var hintText: String {
         if !agents.hooksInstalled.claude || !agents.hooksInstalled.cursor {
             return "Поставьте хуки — тогда Claude Code и Cursor начнут сообщать о своём состоянии"
         }
-        return "Здесь только те сессии, что сейчас работают или ждут вашего участия"
+        return "Здесь те сессии, что работают, ждут вас или закончили и ждут, когда вы к ним зайдёте"
     }
 
     // MARK: - Шапка
@@ -50,7 +58,17 @@ struct AgentsView: View {
                 .foregroundStyle(Color.white.opacity(0.6))
 
             if agents.attentionCount > 0 {
-                attentionBadge
+                badge(
+                    text: "\(agents.attentionCount) ждут вас",
+                    color: agents.glow?.color ?? AgentState.waitingPermission.color
+                )
+            }
+
+            if agents.awaitingVisitCount > 0 {
+                badge(
+                    text: "\(agents.awaitingVisitCount) готовы",
+                    color: AgentState.done.color
+                )
             }
 
             Spacer()
@@ -64,9 +82,8 @@ struct AgentsView: View {
         }
     }
 
-    private var attentionBadge: some View {
-        let color = agents.glow?.color ?? Color(red: 1.0, green: 0.62, blue: 0.20)
-        return Text("\(agents.attentionCount) ждут вас")
+    private func badge(text: String, color: Color) -> some View {
+        Text(text)
             .font(.system(size: 9, weight: .semibold))
             .padding(.horizontal, 7)
             .padding(.vertical, 1)
@@ -114,6 +131,27 @@ struct AgentsView: View {
                 .font(.system(size: 9))
                 .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.42))
                 .lineLimit(2)
+        } else if agents.awaitingVisitCount > 0 {
+            HStack(spacing: 6) {
+                Text("Готовые остаются здесь, пока в них не зайдёшь")
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.white.opacity(0.35))
+
+                Spacer()
+
+                Button(action: agents.dismissDone) {
+                    Text("убрать все")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+                .help("Убрать завершённые сессии, не переходя в них")
+            }
+        } else if !AX.isTrusted {
+            Text("Выдайте Accessibility — без него клик поднимает приложение, но не открывает нужный чат")
+                .font(.system(size: 9))
+                .foregroundStyle(Color.white.opacity(0.35))
+                .lineLimit(2)
         }
     }
 
@@ -133,10 +171,16 @@ struct AgentsView: View {
 struct AgentRow: View {
     let session: AgentSession
     let onActivate: () -> Void
+    /// Есть только у завершённых: убрать строку, не переходя в чат.
+    var onDismiss: (() -> Void)?
 
     @State private var isHovering = false
 
     private var stateColor: Color { session.state.color }
+
+    /// Подсвечиваем и «ждёт», и «готово, но не заходили»: и то и другое — долг
+    /// перед человеком, просто разной срочности.
+    private var isPending: Bool { session.requiresAttention || session.awaitsVisit }
 
     private var rowBackground: some View {
         let base = Color.white.opacity(isHovering ? 0.08 : 0.04)
@@ -145,14 +189,13 @@ struct AgentRow: View {
             .overlay { attentionWash }
     }
 
-    /// У строк, которые ждут человека, под подложкой лежит градиент цвета состояния.
     @ViewBuilder
     private var attentionWash: some View {
-        if session.requiresAttention {
+        if isPending {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [stateColor.opacity(0.22), Color.clear],
+                        colors: [stateColor.opacity(session.requiresAttention ? 0.22 : 0.14), Color.clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -174,7 +217,7 @@ struct AgentRow: View {
             .overlay {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .strokeBorder(
-                        session.requiresAttention ? stateColor.opacity(0.35) : Color.clear,
+                        isPending ? stateColor.opacity(session.requiresAttention ? 0.35 : 0.25) : Color.clear,
                         lineWidth: 1
                     )
             }
@@ -190,7 +233,7 @@ struct AgentRow: View {
                 .fill(stateColor.opacity(0.18))
                 .frame(width: 24, height: 24)
 
-            if session.requiresAttention {
+            if isPending {
                 Circle()
                     .stroke(stateColor.opacity(0.5), lineWidth: 1)
                     .frame(width: 24, height: 24)
@@ -218,17 +261,38 @@ struct AgentRow: View {
     }
 
     private var subtitleText: String {
-        if let detail = session.detail, !detail.isEmpty {
-            return "\(session.state.title) · \(detail)"
+        var parts = [session.state.title]
+
+        if session.awaitsVisit {
+            parts.append(session.hasEnded ? "чат закрыт, вы не заходили" : "вы ещё не заходили")
+        } else if let detail = session.detail, !detail.isEmpty {
+            parts.append(detail)
         }
-        return session.state.title
+
+        if let worktree = session.worktreeName {
+            parts.append(worktree)
+        }
+
+        return parts.joined(separator: " · ")
     }
 
     private var trailing: some View {
         HStack(spacing: 7) {
+            if let onDismiss, isHovering {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.5))
+                        .frame(width: 16, height: 16)
+                        .background(Circle().fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .help("Убрать из списка, не переходя в чат")
+            }
+
             PulsingDot(color: stateColor, animated: session.requiresAttention)
                 .frame(width: 7, height: 7)
-                .shadow(color: stateColor.opacity(session.requiresAttention ? 0.8 : 0), radius: 4)
+                .shadow(color: stateColor.opacity(isPending ? 0.8 : 0), radius: 4)
 
             Image(systemName: "arrow.up.forward")
                 .font(.system(size: 9, weight: .semibold))

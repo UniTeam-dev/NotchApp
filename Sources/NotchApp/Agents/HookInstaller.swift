@@ -94,9 +94,16 @@ enum HookInstaller {
         "SessionEnd"
     ]
 
+    /// У Cursor нет события «агент начал работу», поэтому берём всё, что
+    /// сигнализирует активность. Без `beforeSubmitPrompt` и файловых событий
+    /// чат, который не запускает команды, виден только в момент `stop` —
+    /// то есть уже завершённым.
     private static let cursorEvents = [
+        "beforeSubmitPrompt",
         "beforeShellExecution",
         "beforeMCPExecution",
+        "beforeReadFile",
+        "afterFileEdit",
         "afterShellExecution",
         "afterMCPExecution",
         "stop"

@@ -11,7 +11,17 @@ struct NotchAura: View {
     let isOpen: Bool
     let size: CGSize
 
+    /// «Дыхание» — только для того, что ждёт человека прямо сейчас.
     @State private var breathe = false
+    /// Вспышка на смену состояния: свечение приходит ярким и за несколько
+    /// секунд оседает до своей постоянной яркости. Без этого переход
+    /// «работает → готово» на периферии зрения просто не виден.
+    @State private var settled = true
+
+    private var opacity: Double {
+        let base = glow.intense ? (breathe ? 0.9 : 0.45) : 0.62
+        return min(1, base * glow.strength * (settled ? 1 : 1.7))
+    }
 
     var body: some View {
         NotchShape(
@@ -30,12 +40,23 @@ struct NotchAura: View {
             height: size.height + 12
         )
         .blur(radius: isOpen ? 28 : 16)
-        .opacity((breathe ? 0.85 : 0.42) * (glow.intense ? 1.0 : 0.55))
+        .opacity(opacity)
         .allowsHitTesting(false)
         .onAppear {
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) {
                 breathe = true
             }
+            flare()
+        }
+        .onChange(of: glow) { _, _ in
+            flare()
+        }
+    }
+
+    private func flare() {
+        settled = false
+        withAnimation(.easeOut(duration: 4.5)) {
+            settled = true
         }
     }
 }
@@ -67,34 +88,56 @@ struct PulsingDot: View {
 
 // MARK: - Индикатор в закрытой челке
 
-/// Что видно, когда панель свёрнута, а агент чего-то ждёт: слева иконка IDE,
-/// справа счётчик и пульсирующая точка состояния.
+/// Что видно, когда панель свёрнута, а по агентам есть что сказать.
 ///
-/// Оба элемента прижаты к краям, мимо центральной камеры.
+/// Центр отдан аппаратному вырезу — под ним ничего не рисуем, там ничего не
+/// видно. Иконка IDE уходит в левое крыло, счётчик и значок состояния —
+/// в правое. Значок именно формой, а не только цветом: в крыле шириной 40 pt
+/// зелёная точка и жёлтая точка на глаз почти одинаковы.
 struct ClosedIndicator: View {
     let glow: NotchGlow
     let count: Int
+    /// Ширина физического выреза.
+    let notchWidth: CGFloat
+    /// Ширина полосы сбоку от выреза.
+    let wing: CGFloat
+
+    private var countColor: Color {
+        glow.state == .working ? Color.white.opacity(0.55) : glow.color
+    }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 0) {
             Image(systemName: glow.source.mark)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(glow.tint)
+                .shadow(color: glow.tint.opacity(0.6), radius: 4)
+                .frame(width: wing)
 
-            Spacer()
+            // Мёртвая зона под вырезом.
+            Color.clear.frame(width: notchWidth)
 
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 if count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 9, weight: .bold).monospacedDigit())
-                        .foregroundStyle(glow.intense ? glow.color : Color.white.opacity(0.55))
+                        .font(.system(size: 10, weight: .bold).monospacedDigit())
+                        .foregroundStyle(countColor)
                 }
-                PulsingDot(color: glow.color, animated: glow.intense)
-                    .frame(width: 7, height: 7)
-                    .shadow(color: glow.color.opacity(0.8), radius: 4)
+
+                if glow.state == .working {
+                    PulsingDot(color: glow.color, animated: false)
+                        .frame(width: 7, height: 7)
+                        .shadow(color: glow.color.opacity(0.8), radius: 4)
+                } else {
+                    Image(systemName: glow.mark)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(glow.color)
+                        .shadow(color: glow.color.opacity(0.8), radius: 4)
+                        .symbolEffect(.pulse, isActive: glow.intense)
+                }
             }
+            .frame(width: wing)
         }
-        .padding(.horizontal, 13)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

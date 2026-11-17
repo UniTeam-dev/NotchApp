@@ -2,3 +2,5 @@
 dist/
 *.xcodeproj
 .DS_Store
+.rebuild.log
+_to_delete/

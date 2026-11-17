@@ -9,6 +9,10 @@ struct HookEvent {
     var cwd: String
     var pid: Int32?
     var toolName: String?
+    /// `transcript_path` из payload: путь к стенограмме чата. Сам по себе он
+    /// нам не нужен, но это единственный мостик к человекочитаемому названию
+    /// сессии, если сопоставления по имени папки окажется мало.
+    var transcriptPath: String?
 }
 
 /// Наблюдение за каталогом инбокса.
@@ -80,8 +84,13 @@ final class AgentInbox {
     /// наборы событий у Claude Code и Cursor разные, и различать их надо
     /// до разбора. Хирургия над чужим JSON в `sh` ради вставки одного поля —
     /// верный способ однажды сломать разбор на пустом месте.
+    ///
+    /// Исключение: Cursor параллельно вызывает хуки из `~/.claude/settings.json`
+    /// (те же PreToolUse / SessionStart и т.п.). Скрипт тогда пишет `.claude.json`,
+    /// и без переопределения одна сессия Cursor появляется ещё и как Claude Code.
+    /// Признак Cursor в payload — поле `cursor_version`.
     private func parse(data: Data, fileName: String) -> HookEvent? {
-        let source: AgentSource
+        var source: AgentSource
         if fileName.hasSuffix(".cursor.json") {
             source = .cursor
         } else if fileName.hasSuffix(".claude.json") {
@@ -93,6 +102,10 @@ final class AgentInbox {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             Log.agents.error("инбокс: не разобрался payload \(fileName, privacy: .public)")
             return nil
+        }
+
+        if source == .claude, object["cursor_version"] != nil {
+            source = .cursor
         }
 
         let sessionId = (object["session_id"] as? String)
@@ -112,6 +125,9 @@ final class AgentInbox {
         var pid: Int32?
         if let value = object["pid"] as? Int { pid = Int32(value) }
 
+        let transcript = (object["transcript_path"] as? String)
+            ?? (object["transcriptPath"] as? String)
+
         return HookEvent(
             source: source,
             sessionId: sessionId,
@@ -119,7 +135,8 @@ final class AgentInbox {
             notificationType: object["notification_type"] as? String,
             cwd: cwd,
             pid: pid,
-            toolName: object["tool_name"] as? String
+            toolName: object["tool_name"] as? String,
+            transcriptPath: transcript
         )
     }
 }

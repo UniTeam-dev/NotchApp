@@ -5,11 +5,14 @@ struct NotchRootView: View {
     @ObservedObject var music: MusicModel
     @ObservedObject var shelf: ShelfStore
     @ObservedObject var agents: AgentStore
+    @ObservedObject var commands: CommandStore
+    @ObservedObject var git: GitStore
+    @ObservedObject var keepAwake: KeepAwake
 
     var onRequestClose: () -> Void
 
     var body: some View {
-        let size = viewModel.currentSize
+        let size = currentSize
 
         ZStack(alignment: .top) {
             // Аура лежит за пределами clipShape, поэтому мягко выходит за края.
@@ -23,6 +26,13 @@ struct NotchRootView: View {
         .background(alignment: .top) {
             dropCatcher(size: size)
         }
+    }
+
+    /// Свёрнутая панель шире выреза, когда есть что показать: под самой челкой
+    /// ничего не видно, индикатор живёт в крыльях по бокам от неё.
+    private var currentSize: CGSize {
+        if viewModel.isOpen { return viewModel.openSize }
+        return agents.glow == nil ? viewModel.closedSize : viewModel.closedIndicatorSize
     }
 
     // MARK: - Приёмник файлов
@@ -55,9 +65,14 @@ struct NotchRootView: View {
                 expanded
                     .transition(.opacity)
             } else if let glow = agents.glow {
-                ClosedIndicator(glow: glow, count: agents.attentionCount)
-                    .frame(height: viewModel.closedSize.height)
-                    .transition(.opacity)
+                ClosedIndicator(
+                    glow: glow,
+                    count: agents.pendingCount,
+                    notchWidth: viewModel.closedSize.width,
+                    wing: viewModel.indicatorWing
+                )
+                .frame(height: viewModel.closedSize.height)
+                .transition(.opacity)
             }
         }
         .frame(width: size.width, height: size.height, alignment: .top)
@@ -108,13 +123,22 @@ struct NotchRootView: View {
                 tabChip(for: tab)
             }
             Spacer(minLength: 8)
+            // В шапке, а не на вкладке: переключатель нужен с любого экрана.
+            IconButton(
+                symbol: keepAwake.isOn ? "cup.and.saucer.fill" : "cup.and.saucer",
+                help: keepAwake.isOn ? "Не уходить в сон — включено" : "Не уходить в сон",
+                tint: keepAwake.isOn ? Color(red: 1.0, green: 0.62, blue: 0.20) : nil,
+                action: keepAwake.toggle
+            )
             IconButton(symbol: "xmark", help: "Закрыть", action: onRequestClose)
         }
     }
 
     private func tabChip(for tab: NotchTab) -> some View {
         let isAgents = tab == .agents
-        let badge: Int = isAgents ? agents.attentionCount : 0
+        // В значке вкладки — всё, что ждёт человека, включая непросмотренные
+        // «готово»: иначе завершённый чат виден только в закрытой челке.
+        let badge: Int = isAgents ? agents.pendingCount : 0
         let accent: Color? = isAgents ? agents.glow?.color : nil
 
         return TabChip(
@@ -135,6 +159,10 @@ struct NotchRootView: View {
             ShelfView(shelf: shelf, isDropTargeted: viewModel.isDropTargeted)
         case .agents:
             AgentsView(agents: agents)
+        case .git:
+            GitView(git: git)
+        case .terminal:
+            CommandsView(commands: commands)
         }
     }
 }
@@ -194,6 +222,8 @@ struct IconButton: View {
     let symbol: String
     let help: String
     var size: CGFloat = 11
+    /// Подсветка включённого состояния.
+    var tint: Color? = nil
     let action: () -> Void
 
     var body: some View {
@@ -201,8 +231,8 @@ struct IconButton: View {
             Image(systemName: symbol)
                 .font(.system(size: size, weight: .semibold))
                 .frame(width: 24, height: 22)
-                .background(Capsule().fill(Color.white.opacity(0.06)))
-                .foregroundStyle(Color.white.opacity(0.75))
+                .background(Capsule().fill(tint?.opacity(0.22) ?? Color.white.opacity(0.06)))
+                .foregroundStyle(tint ?? Color.white.opacity(0.75))
         }
         .buttonStyle(.plain)
         .help(help)

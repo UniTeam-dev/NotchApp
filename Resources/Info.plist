@@ -16,6 +16,8 @@
     <string>0.1</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>15.0</string>
     <!-- Утилита живёт в меню-баре: без иконки в Dock и без меню приложения. -->

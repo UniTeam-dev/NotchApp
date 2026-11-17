@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>NotchApp brag</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; background: #050506; overflow: hidden; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; color: #fff; }
+  #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: radial-gradient(ellipse at 50% 0%, #0c0c12 0%, #050506 60%); }
+
+  /* Aura */
+  #auram { position: absolute; left: 0; top: 0; width: 1920px; height: 900px; opacity: 1; }
+  #auraw { position: absolute; left: 210px; top: -20px; width: 1500px; height: 760px; transform-origin: 50% 0%; }
+  .aura { position: absolute; inset: 0; opacity: 0; }
+  #a-blue  { background: radial-gradient(ellipse at 50% 0%, rgba(92,158,255,.95) 0%, rgba(92,158,255,.35) 32%, rgba(92,158,255,0) 68%); }
+  #a-amber { background: radial-gradient(ellipse at 50% 0%, rgba(255,158,51,.95) 0%, rgba(255,158,51,.35) 32%, rgba(255,158,51,0) 68%); }
+  #a-green { background: radial-gradient(ellipse at 50% 0%, rgba(89,212,128,.95) 0%, rgba(89,212,128,.35) 32%, rgba(89,212,128,0) 68%); }
+
+  /* Notch */
+  #notch { position: absolute; top: 0; left: 0; right: 0; margin: 0 auto; width: 420px; height: 64px; background: #000;
+           border-radius: 0 0 26px 26px; box-shadow: 0 0 0 1px rgba(255,255,255,.07); }
+  #wingdot { position: absolute; top: 20px; left: 1210px; width: 24px; height: 24px; border-radius: 50%; background: #FF9E33; box-shadow: 0 0 22px 6px rgba(255,158,51,.7); opacity: 0; }
+
+  /* Big text */
+  .big { position: absolute; left: 0; width: 1920px; text-align: center; font-weight: 600; letter-spacing: -0.02em; opacity: 0; }
+  #t1 { top: 420px; font-size: 96px; }
+  #t2 { top: 560px; font-size: 96px; color: #FF9E33; }
+  #h3 { top: 330px; font-size: 84px; }
+  #cap { top: 690px; font-size: 56px; color: rgba(255,255,255,.92); }
+  #h4 { top: 760px; font-size: 64px; }
+
+  /* Panel (S2 + S4 share geometry) */
+  .panel { position: absolute; left: 370px; top: 0; width: 1180px; height: 580px; opacity: 0; }
+  .hdr { position: absolute; left: 56px; right: 56px; top: 92px; height: 44px; display: flex; align-items: center; gap: 16px; }
+  .hdr .ttl { font-size: 26px; font-weight: 600; color: rgba(255,255,255,.6); }
+  .badge { font-size: 22px; font-weight: 600; padding: 6px 16px; border-radius: 999px; color: #FF9E33; background: rgba(255,158,51,.16); opacity: 0; }
+  .row { position: absolute; left: 44px; right: 44px; height: 100px; border-radius: 22px; background: rgba(255,255,255,.06); display: flex; align-items: center; padding: 0 28px; gap: 22px; opacity: 0; }
+  .row .ic { width: 54px; height: 54px; border-radius: 16px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; }
+  .row .nm { font-size: 32px; font-weight: 600; }
+  .row .sub { font-size: 22px; color: rgba(255,255,255,.6); margin-top: 2px; }
+  .row .grow { flex: 1; }
+  .row .st { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 600; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; }
+  #flash { position: absolute; inset: 0; border-radius: 22px; background: rgba(255,158,51,.28); opacity: 0; }
+
+  /* Cursor */
+  #cursor { position: absolute; left: 0; top: 0; width: 44px; height: 44px; opacity: 0; transform-origin: 6px 4px; }
+
+  /* S3 */
+  #state { position: absolute; left: 0; top: 500px; width: 1920px; height: 120px; }
+  .stl { position: absolute; left: 0; width: 1920px; top: 0; display: flex; align-items: center; justify-content: center; gap: 26px; font-size: 80px; font-weight: 600; opacity: 0; }
+  .stl .dot { width: 34px; height: 34px; }
+  #ides { position: absolute; left: 0; top: 760px; width: 1920px; display: flex; justify-content: center; gap: 28px; }
+  .cap-ide { display: flex; align-items: center; gap: 16px; padding: 16px 32px; border-radius: 999px; font-size: 34px; font-weight: 600; background: rgba(255,255,255,.07); opacity: 0; }
+  .cap-ide .dot { width: 22px; height: 22px; }
+
+  /* S4 tabs */
+  #tabs { position: absolute; left: 56px; right: 56px; top: 92px; height: 68px; display: flex; gap: 10px; }
+  .tab { position: relative; flex: 1; border-radius: 20px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 600; color: rgba(255,255,255,.75); }
+  .tab .on { position: absolute; inset: 0; border-radius: 20px; background: #fff; opacity: 0; }
+  .tab span { position: relative; }
+  .pane { position: absolute; left: 56px; right: 56px; top: 190px; height: 340px; opacity: 0; }
+  .card { position: absolute; border-radius: 22px; background: rgba(255,255,255,.06); }
+
+  /* S5 */
+  #icon { position: absolute; left: 820px; top: 150px; width: 280px; height: 280px; opacity: 0; }
+  #name { top: 470px; font-size: 128px; }
+  #tag { top: 650px; font-size: 52px; font-weight: 500; color: rgba(255,255,255,.85); }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="21">
+
+  <div id="auram"><div id="auraw">
+    <div class="aura" id="a-blue"></div>
+    <div class="aura" id="a-amber"></div>
+    <div class="aura" id="a-green"></div>
+  </div></div>
+
+  <div id="notch"></div>
+  <div id="wingdot"></div>
+
+  <!-- S1 -->
+  <div class="big" id="t1">Claude Code ждёт разрешения.</div>
+  <div class="big" id="t2">Уже 40 минут.</div>
+
+  <!-- S2 panel: Агенты -->
+  <div class="panel" id="p2">
+    <div class="hdr"><span class="ttl">Агенты</span><span class="badge" id="badge">1 ждёт вас</span></div>
+
+    <div class="row" id="r1" style="top:170px">
+      <div id="flash"></div>
+      <div class="ic"><svg width="30" height="30" viewBox="0 0 30 30"><g stroke="#E08A5E" stroke-width="4" stroke-linecap="round"><line x1="15" y1="3" x2="15" y2="27"/><line x1="4.6" y1="9" x2="25.4" y2="21"/><line x1="4.6" y1="21" x2="25.4" y2="9"/></g></svg></div>
+      <div><div class="nm">api-gateway</div><div class="sub">Claude Code</div></div>
+      <div class="grow"></div>
+      <div class="st" style="color:#FF9E33"><div class="dot" style="background:#FF9E33;box-shadow:0 0 14px 4px rgba(255,158,51,.6)"></div>ждёт разрешения</div>
+    </div>
+    <div class="row" id="r2" style="top:284px">
+      <div class="ic"><svg width="30" height="30" viewBox="0 0 30 30"><path d="M15 3 L26 9 L26 21 L15 27 L4 21 L4 9 Z" fill="#CFD9E3"/></svg></div>
+      <div><div class="nm">web-client</div><div class="sub">Cursor</div></div>
+      <div class="grow"></div>
+      <div class="st" style="color:#5C9EFF"><div class="dot" style="background:#5C9EFF"></div>работает</div>
+    </div>
+    <div class="row" id="r3" style="top:398px">
+      <div class="ic"><svg width="30" height="30" viewBox="0 0 30 30"><g stroke="#E08A5E" stroke-width="4" stroke-linecap="round"><line x1="15" y1="3" x2="15" y2="27"/><line x1="4.6" y1="9" x2="25.4" y2="21"/><line x1="4.6" y1="21" x2="25.4" y2="9"/></g></svg></div>
+      <div><div class="nm">docs-site</div><div class="sub">Claude Code</div></div>
+      <div class="grow"></div>
+      <div class="st" style="color:#59D480"><div class="dot" style="background:#59D480"></div>готово</div>
+    </div>
+  </div>
+  <div class="big" id="cap">Клик — и вы у агента.</div>
+
+  <!-- S3 -->
+  <div class="big" id="h3">Цвет — состояние. Оттенок — IDE.</div>
+  <div id="state">
+    <div class="stl" id="s-blue"  style="color:#5C9EFF"><div class="dot" style="background:#5C9EFF"></div>работает</div>
+    <div class="stl" id="s-amber" style="color:#FF9E33"><div class="dot" style="background:#FF9E33"></div>ждёт разрешения</div>
+    <div class="stl" id="s-green" style="color:#59D480"><div class="dot" style="background:#59D480"></div>готово</div>
+  </div>
+  <div id="ides">
+    <div class="cap-ide" id="i1"><div class="dot" style="background:#E08A5E"></div>Claude Code</div>
+    <div class="cap-ide" id="i2"><div class="dot" style="background:#CFD9E3"></div>Cursor</div>
+  </div>
+
+  <!-- S4 panel: вкладки -->
+  <div class="panel" id="p4">
+    <div id="tabs">
+      <div class="tab" id="tb0"><div class="on"></div><span>Музыка</span></div>
+      <div class="tab" id="tb1"><div class="on"></div><span>Полка</span></div>
+      <div class="tab" id="tb2"><div class="on"></div><span>Агенты</span></div>
+      <div class="tab" id="tb3"><div class="on"></div><span>Git</span></div>
+      <div class="tab" id="tb4"><div class="on"></div><span>Терминал</span></div>
+    </div>
+
+    <div class="pane" id="pn0">
+      <div class="card" style="left:0;top:20px;width:150px;height:150px;background:linear-gradient(135deg,#3a4a7a,#7a4a6a)"></div>
+      <div style="position:absolute;left:180px;top:40px;font-size:40px;font-weight:600">Ночной рейс</div>
+      <div style="position:absolute;left:180px;top:96px;font-size:26px;color:rgba(255,255,255,.6)">Студия Тишина</div>
+      <div class="card" style="left:0;top:220px;width:1068px;height:10px;border-radius:5px;background:rgba(255,255,255,.14)"><div style="width:38%;height:10px;border-radius:5px;background:#fff"></div></div>
+    </div>
+    <div class="pane" id="pn1">
+      <div class="card" style="left:0;top:30px;width:330px;height:220px"><div style="position:absolute;left:28px;top:80px;font-size:34px;font-weight:600">brief.pdf</div></div>
+      <div class="card" style="left:369px;top:30px;width:330px;height:220px"><div style="position:absolute;left:28px;top:80px;font-size:34px;font-weight:600">logo.png</div></div>
+      <div class="card" style="left:738px;top:30px;width:330px;height:220px"><div style="position:absolute;left:28px;top:80px;font-size:34px;font-weight:600">notes.md</div></div>
+    </div>
+    <div class="pane" id="pn2">
+      <div class="card" style="left:0;top:20px;width:1068px;height:96px"><div style="position:absolute;left:28px;top:26px;font-size:32px;font-weight:600">api-gateway</div><div class="st" style="position:absolute;right:28px;top:32px;display:flex;align-items:center;gap:12px;font-size:24px;font-weight:600;color:#FF9E33"><div class="dot" style="background:#FF9E33"></div>ждёт разрешения</div></div>
+      <div class="card" style="left:0;top:136px;width:1068px;height:96px"><div style="position:absolute;left:28px;top:26px;font-size:32px;font-weight:600">web-client</div><div class="st" style="position:absolute;right:28px;top:32px;display:flex;align-items:center;gap:12px;font-size:24px;font-weight:600;color:#5C9EFF"><div class="dot" style="background:#5C9EFF"></div>работает</div></div>
+    </div>
+    <div class="pane" id="pn3">
+      <div class="card" style="left:0;top:20px;width:1068px;height:110px"><div style="position:absolute;left:32px;top:20px;font-size:34px;font-weight:600">work</div><div style="position:absolute;left:32px;top:64px;font-size:24px;color:rgba(255,255,255,.6)">acme-dev</div>
+        <div id="tg1" style="position:absolute;right:32px;top:32px;width:88px;height:48px;border-radius:24px;background:#59D480"><div id="k1" style="position:absolute;left:44px;top:4px;width:40px;height:40px;border-radius:50%;background:#fff"></div></div></div>
+      <div class="card" style="left:0;top:150px;width:1068px;height:110px"><div style="position:absolute;left:32px;top:20px;font-size:34px;font-weight:600">personal</div><div style="position:absolute;left:32px;top:64px;font-size:24px;color:rgba(255,255,255,.6)">night-owl</div>
+        <div id="tg2" style="position:absolute;right:32px;top:32px;width:88px;height:48px;border-radius:24px;background:rgba(255,255,255,.16)"><div id="k2" style="position:absolute;left:4px;top:4px;width:40px;height:40px;border-radius:50%;background:#fff"></div></div></div>
+    </div>
+    <div class="pane" id="pn4">
+      <div class="card" style="left:0;top:30px;width:520px;height:150px"><div style="position:absolute;left:28px;top:32px;font-size:36px;font-weight:600">Тесты</div><div style="position:absolute;left:28px;top:88px;font-size:22px;color:rgba(255,255,255,.6)">swift test</div>
+        <div id="ok" style="position:absolute;right:28px;top:40px;width:56px;height:56px;border-radius:50%;background:#59D480;opacity:0;display:flex;align-items:center;justify-content:center"><svg width="30" height="30" viewBox="0 0 30 30"><path d="M6 16 L13 23 L25 8" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+      <div class="card" style="left:548px;top:30px;width:520px;height:150px"><div style="position:absolute;left:28px;top:32px;font-size:36px;font-weight:600">Сборка</div><div style="position:absolute;left:28px;top:88px;font-size:22px;color:rgba(255,255,255,.6)">./scripts/build.sh</div></div>
+    </div>
+  </div>
+  <div class="big" id="h4">Пять вкладок. Ноль Alt+Tab.</div>
+
+  <!-- Cursor -->
+  <svg id="cursor" viewBox="0 0 44 44"><path d="M6 4 L6 34 L14 27 L20 40 L26 37 L20 25 L31 25 Z" fill="#fff" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/></svg>
+
+  <!-- S5 -->
+  <img id="icon" src="assets/img/icon.png" alt="">
+  <div class="big" id="name">NotchApp</div>
+  <div class="big" id="tag">Челка, которая знает, кто вас ждёт.</div>
+
+  <!-- Audio -->
+  <audio id="music" data-start="0" data-duration="21" data-track-index="10" data-volume="0.3" data-fade-out="1.5" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+  <audio id="sfx1" data-start="4.35" data-duration="0.12" data-track-index="11" data-volume="0.6" src="assets/sfx/impactSoft_medium_000.ogg"></audio>
+  <audio id="sfx2" data-start="5.34" data-duration="0.11" data-track-index="12" data-volume="0.5" src="assets/sfx/drop_001.ogg"></audio>
+  <audio id="sfx3" data-start="7.09" data-duration="0.06" data-track-index="13" data-volume="0.7" src="assets/sfx/mouseclick1.ogg"></audio>
+  <audio id="sfx4" data-start="15.84" data-duration="0.61" data-track-index="14" data-volume="0.6" src="assets/sfx/switch_002.ogg"></audio>
+  <audio id="sfx5" data-start="18.56" data-duration="1.48" data-track-index="15" data-volume="0.55" src="assets/sfx/impactBell_heavy_000.ogg"></audio>
+</div>
+
+<script src="assets/gsap.min.js"></script>
+<script src="rms.js"></script>
+<script>
+  const tl = gsap.timeline({ paused: true });
+  const E = "power3.out";
+  const rise = (sel, t, d = 0.5) => tl.fromTo(sel, { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: d, ease: E }, t);
+  const fade = (sel, t, d = 0.3) => tl.to(sel, { opacity: 0, duration: d, ease: "power1.in" }, t);
+  const R = 26;
+
+  // Audio-reactive: music RMS gently modulates aura brightness (630 frames @30fps)
+  RMS.forEach((v, i) => tl.set("#auram", { opacity: +(0.82 + 0.18 * v).toFixed(3) }, i / 30));
+
+  // ---- S1 Hook (0 - 4.4)
+  tl.set("#auraw", { scaleX: 0.5, scaleY: 0.5 }, 0);
+  tl.to("#a-amber", { opacity: 0.8, duration: 0.8, ease: "power2.out" }, 0.2);
+  tl.to("#wingdot", { opacity: 1, duration: 0.4 }, 0.4);
+  for (let i = 0; i < 7; i++) {
+    tl.to("#wingdot", { scale: 1.3, duration: 0.275, ease: "sine.inOut" }, 0.4 + i * 0.55);
+    tl.to("#wingdot", { scale: 1, duration: 0.275, ease: "sine.inOut" }, 0.4 + i * 0.55 + 0.275);
+  }
+  rise("#t1", 0.5, 0.55);
+  rise("#t2", 2.3, 0.55);
+  fade("#t1", 4.1, 0.3); fade("#t2", 4.1, 0.3);
+
+  // ---- S2 Reveal + click (4.39 - 9.0)  // beat-locked: 4.39s
+  tl.to("#wingdot", { opacity: 0, duration: 0.25 }, 4.3);
+  tl.to("#notch", { width: 1180, height: 580, borderBottomLeftRadius: 52, borderBottomRightRadius: 52, duration: 0.65, ease: "expo.out" }, 4.39);
+  tl.to("#auraw", { scaleX: 0.95, scaleY: 0.8, duration: 0.8, ease: E }, 4.39);
+  tl.set("#p2", { opacity: 1 }, 4.39);
+  rise(".hdr .ttl", 4.85, 0.4);
+  tl.fromTo("#badge", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.4, ease: E }, 4.95);
+  // beat-grid: rows at 5.34 / 6.00 / 6.56
+  rise("#r1", 5.34, 0.45); rise("#r2", 6.0, 0.45); rise("#r3", 6.56, 0.45);
+  // simulated click at 7.09 (beat)
+  tl.set("#cursor", { x: 1450, y: 720, opacity: 0 }, 0);
+  tl.to("#cursor", { opacity: 1, duration: 0.2 }, 6.2);
+  tl.to("#cursor", { x: 900, y: 215, duration: 0.85, ease: "power2.inOut" }, 6.2);
+  tl.to("#cursor", { scale: 0.82, duration: 0.07 }, 7.05);
+  tl.to("#cursor", { scale: 1, duration: 0.12 }, 7.12);
+  tl.to("#flash", { opacity: 1, duration: 0.1 }, 7.09);
+  tl.to("#flash", { opacity: 0.35, duration: 0.5 }, 7.2);
+  fade("#cursor", 7.6, 0.25);
+  rise("#cap", 7.3, 0.45);
+  // collapse
+  fade("#p2", 8.6, 0.25); fade("#cap", 8.65, 0.25);
+  tl.to("#notch", { width: 420, height: 64, borderBottomLeftRadius: R, borderBottomRightRadius: R, duration: 0.45, ease: "power3.inOut" }, 8.7);
+
+  // ---- S3 Aura (9.0 - 13.1)
+  tl.to("#auraw", { scaleX: 1.15, scaleY: 1.1, duration: 0.6, ease: E }, 8.8);
+  tl.to("#a-amber", { opacity: 0, duration: 0.4 }, 9.05);
+  tl.to("#a-blue", { opacity: 0.9, duration: 0.5 }, 9.05);
+  rise("#h3", 9.29, 0.55);
+  rise("#s-blue", 9.29, 0.5);
+  rise("#i1", 9.83, 0.4); rise("#i2", 10.37, 0.4);
+  // amber breath: strong cue 10.93
+  tl.to("#a-blue", { opacity: 0, duration: 0.35 }, 10.85);
+  tl.to("#a-amber", { opacity: 0.95, duration: 0.35 }, 10.93);
+  tl.to("#s-blue", { opacity: 0, y: -20, duration: 0.25 }, 10.8);
+  rise("#s-amber", 10.93, 0.4);
+  tl.to("#a-amber", { opacity: 0.6, duration: 0.5, ease: "sine.inOut" }, 11.3);
+  tl.to("#a-amber", { opacity: 0.95, duration: 0.2, ease: "sine.inOut" }, 11.8);
+  tl.to("#s-amber", { opacity: 0, y: -20, duration: 0.25 }, 11.9);
+  tl.to("#a-amber", { opacity: 0, duration: 0.4 }, 12.02);
+  tl.to("#a-green", { opacity: 0.9, duration: 0.4 }, 12.02);
+  rise("#s-green", 12.02, 0.4);
+  fade("#h3", 12.85, 0.25); fade("#s-green", 12.85, 0.25); fade("#i1", 12.85, 0.25); fade("#i2", 12.85, 0.25);
+
+  // ---- S4 Five tabs (13.11 - 17.5)  // beat-locked: 13.11s
+  tl.to("#a-green", { opacity: 0, duration: 0.4 }, 13.0);
+  tl.to("#a-blue", { opacity: 0.45, duration: 0.6 }, 13.0);
+  tl.to("#auraw", { scaleX: 0.95, scaleY: 0.8, duration: 0.6, ease: E }, 13.11);
+  tl.to("#notch", { width: 1180, height: 580, borderBottomLeftRadius: 52, borderBottomRightRadius: 52, duration: 0.6, ease: "expo.out" }, 13.11);
+  tl.set("#p4", { opacity: 1 }, 13.11);
+  tl.fromTo("#tabs", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 13.4);
+  rise("#h4", 13.64, 0.5);
+  // beat-grid: 13.64, 14.20, 14.73, 15.29, 16.38
+  const tabAt = [13.64, 14.20, 14.73, 15.29, 16.38];
+  tabAt.forEach((t, i) => {
+    if (i > 0) {
+      tl.to(`#tb${i - 1} .on`, { opacity: 0, duration: 0.2 }, t);
+      tl.to(`#tb${i - 1} span`, { color: "rgba(255,255,255,0.75)", duration: 0.08 }, t);
+      tl.to(`#pn${i - 1}`, { opacity: 0, duration: 0.1 }, t - 0.05);
+    }
+    tl.to(`#tb${i} .on`, { opacity: 1, duration: 0.1 }, t);
+    tl.to(`#tb${i} span`, { color: "#000", duration: 0.08 }, t + 0.1);
+    tl.fromTo(`#pn${i}`, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: E }, t + 0.12);
+  });
+  // Git toggle flips at 15.84
+  tl.to("#k1", { x: -40, duration: 0.2, ease: "power2.out" }, 15.84);
+  tl.to("#tg1", { backgroundColor: "rgba(255,255,255,0.16)", duration: 0.2 }, 15.84);
+  tl.to("#k2", { x: 40, duration: 0.2, ease: "power2.out" }, 15.84);
+  tl.to("#tg2", { backgroundColor: "#59D480", duration: 0.2 }, 15.84);
+  // Terminal result at 16.93
+  tl.fromTo("#ok", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 16.93);
+
+  // ---- S5 Outro (17.3 - 21)
+  fade("#p4", 17.15, 0.25); fade("#h4", 17.15, 0.25);
+  tl.to("#notch", { width: 420, height: 64, borderBottomLeftRadius: R, borderBottomRightRadius: R, duration: 0.45, ease: "power3.inOut" }, 17.2);
+  tl.to("#a-blue", { opacity: 0.55, duration: 0.6 }, 17.3);
+  tl.to("#a-amber", { opacity: 0.3, duration: 0.6 }, 17.3);
+  tl.to("#auraw", { scaleX: 1.1, scaleY: 1.0, duration: 0.8, ease: E }, 17.3);
+  // strong cue 17.47
+  tl.fromTo("#icon", { opacity: 0, scale: 0.85, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: E }, 17.47);
+  rise("#name", 17.95, 0.55);
+  // strong cue 18.56
+  rise("#tag", 18.56, 0.6);
+
+  window.__timelines = window.__timelines || {};
+  window.__timelines["root"] = tl;
+</script>
+</body>
+</html>

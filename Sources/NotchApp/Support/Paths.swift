@@ -21,6 +21,12 @@ enum Paths {
     /// Копии файлов, брошенных на полку.
     static var shelf: URL { support.appendingPathComponent("shelf", isDirectory: true) }
 
+    /// Привязанные команды вкладки «Терминал».
+    static var commands: URL { support.appendingPathComponent("commands.json") }
+
+    /// Подписи коммитов, которые вкладка «Git» ставит при переключении аккаунта.
+    static var gitIdentities: URL { support.appendingPathComponent("git-identities.json") }
+
     /// Куда хуки складывают payload'ы.
     static var inbox: URL { support.appendingPathComponent("inbox", isDirectory: true) }
 

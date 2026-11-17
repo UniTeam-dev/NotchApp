@@ -33,11 +33,17 @@ final class NotchController: NSObject {
     private let music: MusicModel
     private let shelf: ShelfStore
     private let agents: AgentStore
+    private let commands: CommandStore
+    private let git: GitStore
+    private let keepAwake: KeepAwake
 
-    init(music: MusicModel, shelf: ShelfStore, agents: AgentStore) {
+    init(music: MusicModel, shelf: ShelfStore, agents: AgentStore, commands: CommandStore, git: GitStore, keepAwake: KeepAwake) {
         self.music = music
         self.shelf = shelf
         self.agents = agents
+        self.commands = commands
+        self.git = git
+        self.keepAwake = keepAwake
         super.init()
     }
 
@@ -139,13 +145,17 @@ final class NotchController: NSObject {
     }
 
     /// Зона для перетаскивания — заметно больше, чтобы файл можно было «поднести».
+    ///
+    /// Глубоко вниз намеренно: панель должна раскрыться, пока курсор ещё далеко
+    /// от верхней кромки. Файл, прижатый к кромке, macOS считает жестом входа
+    /// в Mission Control — дотянулись до челки, и вместо полки открылись Spaces.
     private func dragRect(for screen: NSScreen) -> NSRect {
         let anchor = screen.anchorRect
         return NSRect(
             x: anchor.minX - 130,
-            y: anchor.minY - 26,
+            y: anchor.minY - 110,
             width: anchor.width + 260,
-            height: anchor.height + 26
+            height: anchor.height + 110
         )
     }
 
@@ -185,6 +195,9 @@ final class NotchController: NSObject {
             music: music,
             shelf: shelf,
             agents: agents,
+            commands: commands,
+            git: git,
+            keepAwake: keepAwake,
             onRequestClose: { [weak self] in self?.close() }
         )
 

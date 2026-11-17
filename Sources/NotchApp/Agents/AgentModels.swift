@@ -44,6 +44,18 @@ enum AgentState: String, Codable, Hashable {
         }
     }
 
+    /// Значок состояния для закрытой челки: в крыле шириной 40 pt текст не
+    /// читается, а форма — читается.
+    var mark: String {
+        switch self {
+        case .working:           return "circle.dotted"
+        case .waitingPermission: return "hand.raised.fill"
+        case .waitingInput:      return "questionmark"
+        case .done:              return "checkmark"
+        case .error:             return "exclamationmark"
+        }
+    }
+
     /// Порядок сортировки: то, что ждёт человека, всегда сверху.
     var priority: Int {
         switch self {
@@ -56,7 +68,7 @@ enum AgentState: String, Codable, Hashable {
     }
 }
 
-struct AgentSession: Identifiable, Equatable {
+struct AgentSession: Identifiable, Equatable, Codable {
     let id: String
     var sessionId: String
     var source: AgentSource
@@ -68,15 +80,57 @@ struct AgentSession: Identifiable, Equatable {
     /// Время последнего события от хука. При расхождении с опросом приоритет
     /// у хука моложе двух секунд.
     var lastHookAt: Date?
+    /// Путь к стенограмме из payload хука: по нему достаётся человекочитаемый
+    /// заголовок чата, когда понадобится точное сопоставление со списком в IDE.
+    var transcriptPath: String? = nil
+    /// Когда в сессию перешли по клику. Пока `nil`, завершённая сессия остаётся
+    /// в челке — в этом весь смысл: «готово» не должно гаснуть само.
+    var visitedAt: Date? = nil
+    /// Пришёл `SessionEnd`: чат закрыт, но переход в него ещё не совершали.
+    var hasEnded: Bool = false
 
     var requiresAttention: Bool {
         state == .waitingPermission || state == .waitingInput
     }
 
+    /// Закончила работу, но в неё ещё не заходили.
+    var awaitsVisit: Bool {
+        state == .done && visitedAt == nil
+    }
+
+    /// Путь проекта.
+    ///
+    /// У сессий десктопного Claude Code `cwd` — это воркtree внутри проекта
+    /// (`<проект>/.claude/worktrees/<имя>`). Показывать надо проект, иначе
+    /// в списке будут одинаковые «worktrees» вместо названий.
+    var projectPath: String {
+        guard let range = cwd.range(of: "/.claude/worktrees/") else { return cwd }
+        return String(cwd[cwd.startIndex..<range.lowerBound])
+    }
+
+    /// Имя воркtree — самый близкий к названию сессии текст, который у нас есть.
+    var worktreeName: String? {
+        guard let range = cwd.range(of: "/.claude/worktrees/") else { return nil }
+        let tail = cwd[range.upperBound...]
+        guard let first = tail.split(separator: "/").first else { return nil }
+        let name = String(first)
+        return name.isEmpty ? nil : name
+    }
+
     /// Имя папки проекта — то, по чему сессию узнают глазами.
     var title: String {
-        let name = (cwd as NSString).lastPathComponent
+        let name = (projectPath as NSString).lastPathComponent
         return name.isEmpty ? sessionId : name
+    }
+
+    /// Строки, по которым ищем сессию в чужом интерфейсе: сперва самая частная,
+    /// потом самая общая.
+    var matchKeys: [String] {
+        var keys: [String] = []
+        if let worktreeName { keys.append(worktreeName) }
+        let project = title
+        if !project.isEmpty, !keys.contains(project) { keys.append(project) }
+        return keys
     }
 
     static func makeID(source: AgentSource, sessionId: String) -> String {
